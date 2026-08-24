@@ -14,13 +14,18 @@ import random
 
 # We depend on quilt-substrate
 try:
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "quilt-substrate", "src"))
-    from substrate import Substrate, Cell
+    from quilt_substrate.substrate import Substrate, Cell
     HAS_SUBSTRATE = True
 except ImportError:
-    HAS_SUBSTRATE = False
-    Substrate = None
-    Cell = None
+    # Fall back to direct path manipulation for development
+    try:
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "quilt-substrate", "src"))
+        from quilt_substrate.substrate import Substrate, Cell
+        HAS_SUBSTRATE = True
+    except ImportError:
+        HAS_SUBSTRATE = False
+        Substrate = None
+        Cell = None
 
 
 # -- BathyChart ------------------------------------------------------------
