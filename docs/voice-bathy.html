@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Voice Bathy — A chart you can hear</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --panel: #131826;
+    --cell: #1f2937;
+    --text: #e2e8f0;
+    --text-dim: #94a3b8;
+    --accent: #38bdf8;
+    --border: #334155;
+    --fresh: #4ade80;
+    --stale: #fbbf24;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+  .header {
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+  }
+  .header h1 { font-size: 18px; font-weight: 600; }
+  .header .badge { font-size: 11px; color: var(--text-dim); }
+  .main {
+    display: grid;
+    grid-template-columns: 1fr 400px;
+    height: calc(100vh - 60px);
+  }
+  .left {
+    padding: 24px;
+    overflow-y: auto;
+    border-right: 1px solid var(--border);
+  }
+  .right {
+    padding: 24px;
+    background: var(--panel);
+    overflow-y: auto;
+  }
+  .left h2 {
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    letter-spacing: 1.5px;
+    margin-bottom: 12px;
+  }
+  .chart-grid {
+    display: grid;
+    grid-template-columns: repeat(20, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    margin-bottom: 24px;
+  }
+  .chart-cell {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+    cursor: pointer;
+    color: var(--text-dim);
+    transition: transform 0.1s;
+  }
+  .chart-cell:hover { transform: scale(1.2); z-index: 1; }
+  .chart-cell.fresh { background: rgba(74, 222, 128, 0.7); }
+  .chart-cell.stale { background: rgba(251, 191, 36, 0.5); }
+  .chart-cell.empty { background: var(--cell); }
+  .chart-cell.highlighted {
+    background: var(--accent) !important;
+    color: var(--bg) !important;
+    font-weight: bold;
+  }
+  .speech-log {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 16px;
+    font-size: 13px;
+    line-height: 1.8;
+  }
+  .speech-line {
+    padding: 4px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .speech-line:last-child { border-bottom: none; }
+  .speech-line .cell-name { color: var(--accent); }
+  .speech-line .depth { color: var(--fresh); font-weight: bold; }
+  .speech-line .stale { color: var(--stale); }
+  .controls {
+    margin-bottom: 16px;
+    display: flex;
+    gap: 8px;
+  }
+  .btn {
+    background: var(--cell);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 8px 16px;
+    font-size: 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .btn:hover { background: var(--accent); color: var(--bg); }
+  .btn.speaking { background: var(--accent); color: var(--bg); }
+  .legend {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 12px;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+  .legend-item { display: flex; align-items: center; gap: 4px; }
+  .legend-swatch { width: 12px; height: 12px; border-radius: 2px; }
+  .focus-cell {
+    padding: 16px;
+    background: var(--bg);
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    margin-bottom: 16px;
+  }
+  .focus-cell .label {
+    font-size: 10px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .focus-cell .value {
+    font-size: 28px;
+    color: var(--fresh);
+    font-weight: bold;
+    margin: 8px 0;
+  }
+  .keyboard-hint {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 12px;
+    padding: 8px;
+    background: var(--bg);
+    border-radius: 4px;
+  }
+  kbd {
+    background: var(--cell);
+    padding: 2px 6px;
+    border-radius: 3px;
+    border: 1px solid var(--border);
+    font-family: inherit;
+    font-size: 10px;
+  }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>🔊 Voice Bathy — A chart you can hear</h1>
+  <div class="badge">Fable 06 (Grandmother): the opener is usable by anyone, even a blind sailor</div>
+</div>
+<div class="main">
+  <div class="left">
+    <h2>The Chart</h2>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-swatch fresh"></div>Fresh (high confidence)</div>
+      <div class="legend-item"><div class="legend-swatch stale"></div>Stale (low confidence)</div>
+      <div class="legend-item"><div class="legend-swatch empty"></div>No data</div>
+    </div>
+    <div class="chart-grid" id="chart"></div>
+    <h2>Speech Log (what the TTS would say)</h2>
+    <div class="speech-log" id="speech-log"></div>
+  </div>
+  <div class="right">
+    <h2 style="font-size: 11px; text-transform: uppercase; color: var(--text-dim); letter-spacing: 1.5px; margin-bottom: 12px;">Focused Cell</h2>
+    <div class="focus-cell" id="focus-cell">
+      <div class="label">Click a cell or press <kbd>Tab</kbd> to navigate</div>
+    </div>
+    <div class="controls">
+      <button class="btn" id="play-btn">▶ Play all (TTS)</button>
+      <button class="btn" id="stop-btn">⏹ Stop</button>
+    </div>
+    <div class="keyboard-hint">
+      <strong>Keyboard navigation:</strong><br>
+      <kbd>Tab</kbd> next cell · <kbd>Shift+Tab</kbd> previous · <kbd>Space</kbd> speak current cell · <kbd>↑↓←→</kbd> move by 1
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+// Generate a 20x20 bathy chart
+const SIZE = 20;
+const cells = [];  // List of {x, y, depth, fresh}
+for (let x = 0; x < SIZE; x++) {
+  for (let y = 0; y < SIZE; y++) {
+    // Make a depth that varies smoothly
+    const depth = 5 + Math.sin(x * 0.3) * 4 + Math.cos(y * 0.3) * 3 + Math.random() * 2;
+    // Most cells are fresh, some are stale
+    const fresh = Math.random() > 0.15;
+    cells.push({x, y, depth, fresh});
+  }
+}
+
+let focusedIndex = 0;
+let speaking = false;
+let speechQueue = [];
+let utterance = null;
+
+// Render the chart
+function renderChart() {
+  const grid = document.getElementById("chart");
+  grid.innerHTML = "";
+  cells.forEach((cell, i) => {
+    const div = document.createElement("div");
+    div.className = "chart-cell " + (cell.fresh ? "fresh" : "stale");
+    if (i === focusedIndex) div.classList.add("highlighted");
+    div.textContent = cell.depth.toFixed(0);
+    div.onclick = () => focusCell(i);
+    grid.appendChild(div);
+  });
+}
+
+function focusCell(i) {
+  focusedIndex = i;
+  renderChart();
+  renderFocus();
+  speakCell(cells[i]);
+}
+
+function renderFocus() {
+  const cell = cells[focusedIndex];
+  const status = cell.fresh ? "fresh" : "stale";
+  const html = `
+    <div class="label">Cell ${cell.x}, ${cell.y}</div>
+    <div class="value">${cell.depth.toFixed(2)}m</div>
+    <div style="font-size: 11px; color: var(--text-dim);">${status}</div>
+  `;
+  document.getElementById("focus-cell").innerHTML = html;
+  // Highlight in speech log
+  const lines = document.querySelectorAll(".speech-line");
+  lines.forEach((line, j) => {
+    if (j === focusedIndex) line.style.background = "rgba(56, 189, 248, 0.1)";
+    else line.style.background = "transparent";
+  });
+}
+
+function speakCell(cell) {
+  const text = `Cell ${cell.x}, ${cell.y}: ${cell.depth.toFixed(2)} meters. ${cell.fresh ? "Fresh." : "Stale."}`;
+  if ('speechSynthesis' in window) {
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = 0.9;
+    u.pitch = 1.0;
+    speechSynthesis.speak(u);
+  }
+  // Also add to log
+  const log = document.getElementById("speech-log");
+  const line = document.createElement("div");
+  line.className = "speech-line";
+  line.innerHTML = `<span class="cell-name">Cell ${cell.x}, ${cell.y}:</span> <span class="depth">${cell.depth.toFixed(2)}m</span> ${cell.fresh ? "fresh" : '<span class="stale">stale</span>'}`;
+  log.appendChild(line);
+  log.scrollTop = log.scrollHeight;
+}
+
+function speakAll() {
+  if (speaking) return;
+  speaking = true;
+  document.getElementById("play-btn").classList.add("speaking");
+  document.getElementById("play-btn").textContent = "⏸ Speaking...";
+  let i = 0;
+  function next() {
+    if (i >= cells.length) {
+      speaking = false;
+      document.getElementById("play-btn").classList.remove("speaking");
+      document.getElementById("play-btn").textContent = "▶ Play all (TTS)";
+      return;
+    }
+    focusedIndex = i;
+    renderChart();
+    renderFocus();
+    speakCell(cells[i]);
+    i++;
+    setTimeout(next, 2500);
+  }
+  next();
+}
+
+function stopSpeaking() {
+  if ('speechSynthesis' in window) {
+    speechSynthesis.cancel();
+  }
+  speaking = false;
+  document.getElementById("play-btn").classList.remove("speaking");
+  document.getElementById("play-btn").textContent = "▶ Play all (TTS)";
+}
+
+// Keyboard navigation
+document.addEventListener("keydown", (e) => {
+  const x = cells[focusedIndex].x;
+  const y = cells[focusedIndex].y;
+  if (e.key === "Tab") {
+    e.preventDefault();
+    const next = e.shiftKey ? focusedIndex - 1 : focusedIndex + 1;
+    if (next >= 0 && next < cells.length) focusCell(next);
+  } else if (e.key === " ") {
+    e.preventDefault();
+    speakCell(cells[focusedIndex]);
+  } else if (e.key === "ArrowUp" && y < SIZE - 1) {
+    e.preventDefault();
+    const i = cells.findIndex(c => c.x === x && c.y === y + 1);
+    if (i >= 0) focusCell(i);
+  } else if (e.key === "ArrowDown" && y > 0) {
+    e.preventDefault();
+    const i = cells.findIndex(c => c.x === x && c.y === y - 1);
+    if (i >= 0) focusCell(i);
+  } else if (e.key === "ArrowLeft" && x > 0) {
+    e.preventDefault();
+    const i = cells.findIndex(c => c.x === x - 1 && c.y === y);
+    if (i >= 0) focusCell(i);
+  } else if (e.key === "ArrowRight" && x < SIZE - 1) {
+    e.preventDefault();
+    const i = cells.findIndex(c => c.x === x + 1 && c.y === y);
+    if (i >= 0) focusCell(i);
+  }
+});
+
+document.getElementById("play-btn").onclick = speakAll;
+document.getElementById("stop-btn").onclick = stopSpeaking;
+
+renderChart();
+renderFocus();
+speakCell(cells[0]);  // Speak the first cell on load
+</script>
+</body>
+</html>
