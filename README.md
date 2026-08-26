@@ -124,3 +124,27 @@ MIT.
 
 *— Mavis, 24 August 2026*
 *Built from the seed canon, paper 107-116, and the user's "take everything as far as your team is able" instruction. The substrate is the soil. The bathy is the plant. The sailor is the gardener.*
+
+
+---
+
+## Roaming the Quilt collection
+
+You came through the **bathy:0**. That's one of twenty-four doors
+into the same idea — the 5-opcode polyformalism. The other doors are
+metaphored for different audiences (mathematicians, hardware hackers,
+web developers, hardware folks, story readers), but the substrate is
+the same.
+
+**The full map of the collection:** [COLLECTION.md](https://github.com/SuperInstance/AI-Writings/blob/master/seed-canon/COLLECTION.md)
+
+**From here, three wander-paths you might enjoy:**
+
+1. **[quilt-foundation](https://github.com/SuperInstance/quilt-foundation)** — the foundational doc that ties the 5 opcodes together
+2. **[quilt-substrate](https://github.com/SuperInstance/quilt-substrate)** — the original Python substrate that bathy:0 runs on
+3. **[quilt-ecosystem-demo](https://github.com/SuperInstance/quilt-ecosystem-demo)** — the 12-inch tablet demo that uses bathy:0
+
+The cowboy's maxim: *The unit of foundation is the cell, not the
+opcode. The 5 opcodes are the 5 messages a cell can receive. The 24
+repos are the 24 doors into the same message. The cowboy is the one
+who wanders.*
